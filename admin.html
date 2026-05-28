@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundWave — Админ-панель</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { min-height:100vh; background:var(--bg-base); }
+    .admin-layout { display:flex; min-height:100vh; }
+
+    /* Боковое меню */
+    .admin-sidebar {
+      width:200px; flex-shrink:0;
+      background:var(--bg-surface);
+      border-right:1px solid var(--border);
+      padding:0 0 20px;
+      position:sticky; top:0; height:100vh;
+      display:flex; flex-direction:column;
+    }
+    .admin-logo {
+      padding:20px 16px 16px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:8px;
+    }
+    .admin-logo a {
+      font-size:12px; color:var(--text-muted);
+      display:flex; align-items:center; gap:6px;
+      text-decoration:none; transition:color .2s;
+    }
+    .admin-logo a:hover { color:var(--accent-1); }
+    .admin-logo h2 {
+      font-family:'Syne',sans-serif; font-size:15px; font-weight:800;
+      background:var(--grad-main);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      margin-top:8px;
+    }
+    .admin-nav-item {
+      display:flex; align-items:center; gap:9px;
+      padding:9px 16px; font-size:13px; font-weight:500;
+      color:var(--text-secondary); cursor:pointer;
+      transition:all .2s; border-left:3px solid transparent;
+    }
+    .admin-nav-item:hover { color:var(--text-primary); background:var(--bg-hover); }
+    .admin-nav-item.active { color:var(--text-primary); background:var(--grad-soft); border-left-color:var(--accent-1); }
+    .admin-nav-icon { font-size:15px; width:18px; text-align:center; }
+
+    /* Основная область */
+    .admin-main { flex:1; padding:28px 32px 60px; max-width:960px; }
+    .admin-page { display:none; }
+    .admin-page.active { display:block; }
+
+    .admin-page-title {
+      font-family:'Syne',sans-serif; font-size:22px; font-weight:800;
+      margin-bottom:24px;
+      display:flex; align-items:center; gap:10px;
+    }
+
+    /* Сохранение */
+    .save-banner {
+      position:fixed; bottom:24px; right:28px;
+      background:var(--bg-elevated); border:1px solid var(--border-accent);
+      border-radius:99px; padding:10px 20px;
+      font-size:13px; font-weight:600; color:var(--accent-1);
+      opacity:0; pointer-events:none; transition:opacity .3s;
+      z-index:200; display:flex; align-items:center; gap:8px;
+    }
+    .save-banner.show { opacity:1; }
+
+    /* Карточка формы */
+    .a-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:22px;
+      margin-bottom:24px;
+    }
+    .a-card-title {
+      font-family:'Syne',sans-serif; font-size:15px; font-weight:700;
+      margin-bottom:18px; display:flex; align-items:center; gap:8px;
+    }
+    .a-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+      gap:14px; margin-bottom:16px;
+    }
+    .a-field { display:flex; flex-direction:column; gap:5px; }
+    .a-field.full { grid-column:1/-1; }
+    .a-field label { font-size:11px; font-weight:600; color:var(--text-secondary); letter-spacing:.05em; text-transform:uppercase; }
+    .a-field input, .a-field select, .a-field textarea {
+      padding:9px 11px; background:var(--bg-elevated);
+      border:1px solid var(--border); border-radius:var(--radius-sm);
+      color:var(--text-primary); font-size:13px; font-family:'DM Sans',sans-serif;
+      outline:none; transition:border-color .2s;
+    }
+    .a-field input:focus, .a-field select:focus, .a-field textarea:focus { border-color:var(--border-accent); }
+    .a-field input::placeholder, .a-field textarea::placeholder { color:var(--text-muted); }
+    .a-field select option { background:var(--bg-elevated); }
+    .a-field textarea { resize:vertical; min-height:72px; }
+
+    /* Drag & Drop зона */
+    .drop-zone {
+      border:2px dashed var(--border); border-radius:var(--radius-md);
+      padding:14px 16px; cursor:pointer; transition:all .2s;
+      display:flex; align-items:center; gap:12px;
+      background:var(--bg-elevated);
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color:var(--accent-1); background:rgba(192,38,211,.06); }
+    .drop-zone .dz-preview {
+      width:52px; height:52px; border-radius:8px; object-fit:cover;
+      background:var(--bg-base); flex-shrink:0; border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; overflow:hidden;
+    }
+    .drop-zone .dz-preview img { width:100%; height:100%; object-fit:cover; }
+    .drop-zone .dz-text { font-size:12px; color:var(--text-secondary); line-height:1.5; }
+    .drop-zone .dz-text b { color:var(--text-primary); display:block; font-size:13px; margin-bottom:2px; }
+    .drop-zone .dz-text small { color:var(--text-muted); font-size:11px; }
+    .drop-zone input[type=file] { display:none; }
+
+    /* Кнопки */
+    .a-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn-save {
+      padding:9px 20px; border-radius:99px; font-size:13px; font-weight:600;
+      background:var(--grad-main); color:#fff; cursor:pointer;
+      box-shadow:0 4px 14px rgba(192,38,211,.3); transition:opacity .2s,transform .2s;
+    }
+    .btn-save:hover { opacity:.85; transform:translateY(-1px); }
+    .btn-reset {
+      padding:9px 16px; border-radius:99px; font-size:13px; font-weight:500;
+      border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; transition:all .2s;
+    }
+    .btn-reset:hover { border-color:var(--text-muted); color:var(--text-primary); }
+
+    /* Таблица */
+    .a-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .a-table th {
+      text-align:left; padding:9px 12px;
+      background:var(--bg-surface); border-bottom:1px solid var(--border);
+      color:var(--text-secondary); font-size:10px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.07em;
+    }
+    .a-table td { padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .a-table tr:hover td { background:var(--bg-hover); }
+    .a-table .thumb { width:34px; height:34px; border-radius:6px; object-fit:cover; background:var(--bg-elevated); display:block; }
+    .a-table .avatar { width:30px; height:30px; border-radius:50%; object-fit:cover; background:var(--bg-elevated); display:block; }
+    .td-btns { display:flex; gap:5px; }
+    .btn-e { padding:4px 11px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all .2s; background:rgba(124,58,237,.15); color:var(--accent-2); border:1px solid rgba(124,58,237,.3); }
+    .btn-e:hover { background:rgba(124,58,237,.3); }
+    .btn-d { padding:4px 11px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all .2s; background:rgba(239,68,68,.1); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
+    .btn-d:hover { background:rgba(239,68,68,.25); }
+
+    /* Жанры — цветные пилюли */
+    .genre-pill-edit {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:5px 12px; border-radius:99px; font-size:12px; font-weight:600;
+      border:1px solid var(--border); background:var(--bg-elevated);
+      cursor:pointer; transition:all .2s;
+    }
+    .genre-pill-edit:hover { border-color:var(--border-accent); }
+    .color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+    /* Инфо-блок */
+    .info-box {
+      background:var(--grad-soft); border:1px solid var(--border-accent);
+      border-radius:var(--radius-md); padding:14px 16px;
+      font-size:12px; color:var(--text-secondary); line-height:1.7;
+      margin-bottom:20px;
+    }
+    .info-box b { color:var(--accent-1); }
+    .info-box code { background:var(--bg-base); padding:1px 5px; border-radius:4px; font-family:'Courier New',monospace; font-size:11px; color:var(--accent-1); }
+
+    .empty-row td { text-align:center; padding:28px; color:var(--text-muted); }
+
+    .toast { bottom:70px; }
+    #confirm-overlay { display:none; }
+    #confirm-overlay.open { display:flex; }
+    #confirm-overlay.open > div { transform:scale(1) !important; }
+  </style>
+</head>
+<body>
+<!-- Экран логина -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">⚙️</div>
+    <div class="login-title">Админ-панель</div>
+    <div class="login-sub">SoundWave — только для администратора</div>
+    <input class="login-field" type="text" id="login-input" placeholder="Логин"
+           autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+    <input class="login-field" type="password" id="login-pass" placeholder="Пароль"
+           autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <a href="index.html">← На сайт</a>
+      <h2>⚙️ Админ</h2>
+    </div>
+    <div class="admin-nav-item active" onclick="showPage('tracks')" data-p="tracks">
+      <span class="admin-nav-icon">🎵</span> Треки
+    </div>
+    <div class="admin-nav-item" onclick="showPage('artists')" data-p="artists">
+      <span class="admin-nav-icon">🎤</span> Исполнители
+    </div>
+    <div class="admin-nav-item" onclick="showPage('albums')" data-p="albums">
+      <span class="admin-nav-icon">💿</span> Альбомы
+    </div>
+    <div class="admin-nav-item" onclick="showPage('genres')" data-p="genres">
+      <span class="admin-nav-icon">🎭</span> Жанры
+    </div>
+    <div style="margin-top:auto;padding:0 8px">
+      <div class="admin-nav-item" onclick="showPage('account')" data-p="account" style="border-radius:8px;margin-bottom:4px">
+        <span class="admin-nav-icon">🔑</span> Аккаунт
+      </div>
+      <div class="admin-nav-item" onclick="doLogout()" style="border-radius:8px;color:#ef4444">
+        <span class="admin-nav-icon">🚪</span> Выйти
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);padding:8px 8px 0;border-top:1px solid var(--border);margin-top:6px">
+        Данные сохраняются автоматически
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+
+    <!-- ══ ТРЕКИ ══ -->
+    <div class="admin-page active" id="ap-tracks">
+      <div class="admin-page-title">🎵 Треки</div>
+
+      <div class="info-box">
+        <b>Как добавить реальный MP3:</b> положи файл в папку <code>soundwave/music/</code>
+        и в поле «Файл» напиши <code>music/название.mp3</code>.<br>
+        Или вставь прямую ссылку на .mp3 из интернета.
+        Обложки кидай в <code>soundwave/covers/</code> → пиши <code>covers/файл.jpg</code>.
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-title" id="track-form-title">➕ Добавить трек</div>
+        <input type="hidden" id="et-id">
+        <div class="a-grid">
+          <div class="a-field">
+            <label>Название *</label>
+            <input type="text" id="t-title" placeholder="Название трека">
+          </div>
+          <div class="a-field">
+            <label>Исполнитель *</label>
+            <select id="t-artist" onchange="updateAlbumsByArtist()"></select>
+          </div>
+          <div class="a-field">
+            <label>Альбом</label>
+            <select id="t-album"></select>
+          </div>
+          <div class="a-field">
+            <label>Жанр *</label>
+            <select id="t-genre"></select>
+          </div>
+          <div class="a-field">
+            <label>Год</label>
+            <input type="number" id="t-year" placeholder="2024" min="1900" max="2099">
+          </div>
+          <div class="a-field full">
+            <label>Файл MP3 — перетащи сюда или укажи путь</label>
+            <div class="drop-zone" id="dz-mp3"
+                 ondragover="dzOver(event,'dz-mp3')" ondragleave="dzLeave('dz-mp3')"
+                 ondrop="dzDropMp3(event)"
+                 onclick="document.getElementById('dz-mp3-input').click()"
+                 style="margin-bottom:6px">
+              <div class="dz-preview" id="dz-mp3-prev" style="font-size:28px;background:var(--bg-base)">🎵</div>
+              <div class="dz-text">
+                <b id="dz-mp3-name">Перетащи MP3 файл сюда</b>
+                Или нажми чтобы выбрать файл<br>
+                <small>Название, длительность подтянутся автоматически</small>
+              </div>
+              <input type="file" id="dz-mp3-input" accept="audio/mp3,audio/mpeg,.mp3"
+                     onchange="mp3FileInput(this)">
+            </div>
+            <input type="text" id="t-file" placeholder="music/track.mp3  или  https://..."
+                   oninput="document.getElementById('dz-mp3-name').textContent='Перетащи MP3 файл сюда'">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+              💡 При drag & drop — файл будет встроен в base64 (работает без сервера).
+              Для GitHub Pages лучше указать путь <code style="color:var(--accent-1)">music/название.mp3</code>
+            </div>
+          </div>
+          <div class="a-field full">
+            <label>Обложка трека (drag & drop или путь)</label>
+            <div class="drop-zone" id="dz-track"
+                 ondragover="dzOver(event,'dz-track')" ondragleave="dzLeave('dz-track')"
+                 ondrop="dzDrop(event,'dz-track','t-cover-data')"
+                 onclick="document.getElementById('dz-track-input').click()">
+              <div class="dz-preview" id="dz-track-prev">🖼</div>
+              <div class="dz-text">
+                <b>Перетащи обложку сюда</b>
+                Или нажми чтобы выбрать файл<br>
+                <small>JPG, PNG — любой размер, автоматически масштабируется до 300×300</small>
+              </div>
+              <input type="file" id="dz-track-input" accept="image/*"
+                     onchange="dzFileInput(this,'dz-track','dz-track-prev','t-cover-data')">
+            </div>
+            <input type="hidden" id="t-cover-data">
+            <input type="text" id="t-cover-url" placeholder="Или вставь URL обложки: covers/... или https://..."
+                   style="margin-top:6px" oninput="previewUrl(this.value,'dz-track-prev')">
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="btn-save" onclick="saveTrack()">💾 Сохранить</button>
+          <button class="btn-reset" onclick="resetTrackForm()">✕ Сбросить</button>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-title" style="justify-content:space-between;display:flex;align-items:center">
+          <span>📋 Все треки <span id="tc" style="font-weight:400;font-size:13px;color:var(--text-muted)"></span></span>
+        </div>
+        <!-- Поиск и фильтр жанра -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="position:relative;flex:1;min-width:200px">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)">🔍</span>
+            <input type="text" id="t-search" placeholder="Поиск по названию или исполнителю..."
+              oninput="filterTracksTable()"
+              style="width:100%;padding:9px 12px 9px 36px;background:var(--bg-elevated);border:1px solid var(--border);
+                     border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
+          </div>
+          <select id="t-filter-genre" onchange="filterTracksTable()"
+            style="padding:9px 12px;background:var(--bg-elevated);border:1px solid var(--border);
+                   border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
+            <option value="0">Все жанры</option>
+          </select>
+          <select id="t-filter-artist" onchange="filterTracksTable()"
+            style="padding:9px 12px;background:var(--bg-elevated);border:1px solid var(--border);
+                   border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
+            <option value="0">Все исполнители</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="a-table" id="t-table"></table>
+        </div>
+        <div id="t-pagination" style="display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <!-- ══ ИСПОЛНИТЕЛИ ══ -->
+    <div class="admin-page" id="ap-artists">
+      <div class="admin-page-title">🎤 Исполнители</div>
+      <div class="a-card">
+        <div class="a-card-title" id="artist-form-title">➕ Добавить исполнителя</div>
+        <input type="hidden" id="ea-id">
+        <div class="a-grid">
+          <div class="a-field">
+            <label>Имя / Группа *</label>
+            <input type="text" id="a-name" placeholder="Radiohead">
+          </div>
+          <div class="a-field">
+            <label>Страна</label>
+            <input type="text" id="a-country" placeholder="Россия">
+          </div>
+          <div class="a-field full">
+            <label>Биография</label>
+            <textarea id="a-bio" placeholder="Краткое описание..."></textarea>
+          </div>
+          <div class="a-field full">
+            <label>Фото (drag & drop или путь/URL)</label>
+            <div class="drop-zone" id="dz-artist"
+                 ondragover="dzOver(event,'dz-artist')" ondragleave="dzLeave('dz-artist')"
+                 ondrop="dzDrop(event,'dz-artist','a-photo-data')"
+                 onclick="document.getElementById('dz-artist-input').click()">
+              <div class="dz-preview" id="dz-artist-prev" style="border-radius:50%">👤</div>
+              <div class="dz-text">
+                <b>Перетащи фото артиста сюда</b>
+                Или нажми чтобы выбрать файл<br>
+                <small>Автоматически обрезается до 200×200 (круг)</small>
+              </div>
+              <input type="file" id="dz-artist-input" accept="image/*"
+                     onchange="dzFileInput(this,'dz-artist','dz-artist-prev','a-photo-data')">
+            </div>
+            <input type="hidden" id="a-photo-data">
+            <input type="text" id="a-photo-url" placeholder="Или URL: covers/artist.jpg  или  https://..."
+                   style="margin-top:6px" oninput="previewUrl(this.value,'dz-artist-prev')">
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="btn-save" onclick="saveArtist()">💾 Сохранить</button>
+          <button class="btn-reset" onclick="resetArtistForm()">✕ Сбросить</button>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">📋 Все исполнители</div>
+        <div style="position:relative;margin-bottom:14px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)">🔍</span>
+          <input type="text" id="a-search" placeholder="Поиск по имени..."
+            oninput="filterArtistsTable()"
+            style="width:100%;padding:9px 12px 9px 36px;background:var(--bg-elevated);border:1px solid var(--border);
+                   border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
+        </div>
+        <div id="a-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:12px"></div>
+        <div id="a-pagination" style="display:flex;gap:6px;justify-content:center;margin-top:4px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <!-- ══ АЛЬБОМЫ ══ -->
+    <div class="admin-page" id="ap-albums">
+      <div class="admin-page-title">💿 Альбомы</div>
+      <div class="a-card">
+        <div class="a-card-title" id="album-form-title">➕ Добавить альбом</div>
+        <input type="hidden" id="eal-id">
+        <div class="a-grid">
+          <div class="a-field">
+            <label>Название *</label>
+            <input type="text" id="al-title" placeholder="Dark Side of the Moon">
+          </div>
+          <div class="a-field">
+            <label>Исполнитель *</label>
+            <select id="al-artist"></select>
+          </div>
+          <div class="a-field">
+            <label>Год</label>
+            <input type="number" id="al-year" placeholder="2024" min="1900" max="2099">
+          </div>
+          <div class="a-field full">
+            <label>Обложка (drag & drop или путь/URL)</label>
+            <div class="drop-zone" id="dz-album"
+                 ondragover="dzOver(event,'dz-album')" ondragleave="dzLeave('dz-album')"
+                 ondrop="dzDrop(event,'dz-album','al-cover-data')"
+                 onclick="document.getElementById('dz-album-input').click()">
+              <div class="dz-preview" id="dz-album-prev">🖼</div>
+              <div class="dz-text">
+                <b>Перетащи обложку альбома сюда</b>
+                Или нажми чтобы выбрать файл<br>
+                <small>Автоматически масштабируется до 300×300</small>
+              </div>
+              <input type="file" id="dz-album-input" accept="image/*"
+                     onchange="dzFileInput(this,'dz-album','dz-album-prev','al-cover-data')">
+            </div>
+            <input type="hidden" id="al-cover-data">
+            <input type="text" id="al-cover-url" placeholder="Или URL: covers/album.jpg  или  https://..."
+                   style="margin-top:6px" oninput="previewUrl(this.value,'dz-album-prev')">
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="btn-save" onclick="saveAlbum()">💾 Сохранить</button>
+          <button class="btn-reset" onclick="resetAlbumForm()">✕ Сбросить</button>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">📋 Все альбомы</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="position:relative;flex:1;min-width:200px">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)">🔍</span>
+            <input type="text" id="al-search" placeholder="Поиск по названию..."
+              oninput="filterAlbumsTable()"
+              style="width:100%;padding:9px 12px 9px 36px;background:var(--bg-elevated);border:1px solid var(--border);
+                     border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
+          </div>
+          <select id="al-filter-artist" onchange="filterAlbumsTable()"
+            style="padding:9px 12px;background:var(--bg-elevated);border:1px solid var(--border);
+                   border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
+            <option value="0">Все исполнители</option>
+          </select>
+        </div>
+        <div id="al-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:12px"></div>
+        <div id="al-pagination" style="display:flex;gap:6px;justify-content:center;margin-top:4px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <!-- ══ ЖАНРЫ ══ -->
+    <div class="admin-page" id="ap-genres">
+      <div class="admin-page-title">🎭 Жанры</div>
+      <div class="a-card">
+        <div class="a-card-title" id="genre-form-title">➕ Добавить жанр</div>
+        <input type="hidden" id="eg-id">
+        <div class="a-grid">
+          <div class="a-field">
+            <label>Название жанра *</label>
+            <input type="text" id="g-name" placeholder="Хип-Хоп">
+          </div>
+          <div class="a-field" style="position:relative">
+            <label>Иконка (эмодзи)</label>
+            <button type="button" id="g-icon-btn" onclick="toggleEmojiPicker()"
+              style="width:100%;padding:9px 11px;background:var(--bg-elevated);border:1px solid var(--border);
+                     border-radius:var(--radius-sm);color:var(--text-primary);font-size:20px;cursor:pointer;
+                     text-align:left;transition:border-color .2s;display:flex;align-items:center;gap:10px">
+              <span id="g-icon-preview">🎵</span>
+              <span style="font-size:12px;color:var(--text-muted)">Нажми чтобы выбрать</span>
+            </button>
+            <input type="hidden" id="g-icon" value="🎵">
+            <div id="emoji-picker" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:300;
+                 background:var(--bg-elevated);border:1px solid var(--border-accent);
+                 border-radius:var(--radius-lg);padding:18px;width:420px;
+                 box-shadow:0 20px 50px rgba(0,0,0,.6)">
+              <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.07em;
+                          text-transform:uppercase;margin-bottom:12px">Выбери иконку жанра</div>
+              <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(9,1fr);gap:5px;max-height:320px;overflow-y:auto"></div>
+            </div>
+          </div>
+          <div class="a-field">
+            <label>Цвет акцента</label>
+            <input type="color" id="g-color" value="#a855f7" style="height:40px;padding:4px 6px;cursor:pointer">
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="btn-save" onclick="saveGenre()">💾 Сохранить</button>
+          <button class="btn-reset" onclick="resetGenreForm()">✕ Сбросить</button>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">📋 Все жанры</div>
+        <div style="overflow-x:auto"><table class="a-table" id="g-table"></table></div>
+      </div>
+    </div>
+
+    <!-- ══ АККАУНТ ══ -->
+    <div class="admin-page" id="ap-account">
+      <div class="admin-page-title">🔑 Аккаунт</div>
+      <div class="a-card" style="max-width:460px">
+        <div class="a-card-title">Смена логина и пароля</div>
+        <div id="account-current-login" style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+          Текущий логин: <b id="current-login-display" style="color:var(--text-primary)"></b>
+        </div>
+        <div class="a-grid" style="grid-template-columns:1fr">
+          <div class="a-field">
+            <label>Новый логин *</label>
+            <input type="text" id="new-login" placeholder="Введи новый логин" autocomplete="off">
+          </div>
+          <div class="a-field">
+            <label>Новый пароль *</label>
+            <input type="password" id="new-pass" placeholder="Минимум 4 символа" autocomplete="new-password">
+          </div>
+          <div class="a-field">
+            <label>Подтверди пароль *</label>
+            <input type="password" id="new-pass2" placeholder="Повтори пароль" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="a-actions" style="margin-top:16px">
+          <button class="btn-save" onclick="saveAccountCredentials()">💾 Сохранить</button>
+        </div>
+      </div>
+      <div class="a-card" style="max-width:460px;margin-top:0">
+        <div class="a-card-title" style="color:var(--text-secondary);font-size:13px">💡 Дефолтные данные для входа</div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.7">
+          Логин: <code style="color:var(--accent-1);background:var(--bg-base);padding:1px 5px;border-radius:4px">admin</code><br>
+          Пароль: <code style="color:var(--accent-1);background:var(--bg-base);padding:1px 5px;border-radius:4px">admin123</code>
+        </p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Кастомный попап подтверждения -->
+<div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+     backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center;"
+     onclick="if(event.target===this)confirmNo()">
+  <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-xl);
+              padding:28px;min-width:300px;max-width:400px;width:90%;
+              box-shadow:0 24px 60px rgba(0,0,0,.5);transform:scale(.95);transition:transform .2s">
+    <div style="font-size:32px;margin-bottom:12px;text-align:center">⚠️</div>
+    <div id="confirm-message" style="font-size:15px;font-weight:500;text-align:center;
+         margin-bottom:24px;line-height:1.5;color:var(--text-primary)"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="confirmNo()"
+        style="padding:10px 24px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;
+               border:1px solid var(--border);background:transparent;color:var(--text-secondary);
+               transition:all .2s;font-family:inherit"
+        onmouseover="this.style.borderColor='var(--text-muted)';this.style.color='var(--text-primary)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+        Отмена
+      </button>
+      <button onclick="confirmYes()"
+        style="padding:10px 24px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;
+               border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;
+               box-shadow:0 4px 14px rgba(239,68,68,.4);transition:all .2s;font-family:inherit"
+        onmouseover="this.style.opacity='.85'"
+        onmouseout="this.style.opacity='1'">
+        Удалить
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="save-banner" id="save-banner">✓ Сохранено</div>
+<div class="toast" id="toast"></div>
+
+<script src="js/auth.js"></script>
+<script src="data/firebase.js"></script>
+<script src="data/db.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  STORAGE — Firebase Realtime Database
+// ══════════════════════════════════════════════════════════
+
+// Рабочее состояние — стартует из дефолтных данных db.js
+// Перезаписывается из Firebase при initAdmin()
+const S = {
+  artists: JSON.parse(JSON.stringify(DB.artists)),
+  albums:  JSON.parse(JSON.stringify(DB.albums)),
+  tracks:  JSON.parse(JSON.stringify(DB.tracks)),
+  genres:  JSON.parse(JSON.stringify(DB.genres)),
+};
+
+// Сохранить в Firebase и обновить кеш
+async function persistState() {
+  showSaveBanner("⏳ Сохраняю...");
+  const ok = await Firebase.saveAll({
+    artists: S.artists,
+    albums:  S.albums,
+    tracks:  S.tracks,
+    genres:  S.genres,
+  });
+  // Обновить кеш в localStorage для офлайн-просмотра на сайте
+  try {
+    localStorage.setItem("sw_firebase_cache", JSON.stringify({
+      artists: S.artists, albums: S.albums,
+      tracks: S.tracks, genres: S.genres
+    }));
+  } catch(e) {}
+  if (ok) showSaveBanner("✓ Сохранено в Firebase");
+  else     showSaveBanner("⚠️ Ошибка сохранения!");
+}
+
+// Патчим DB объект в памяти
+function patchLiveDB() {
+  DB.artists = [...S.artists];
+  DB.albums  = [...S.albums];
+  DB.tracks  = [...S.tracks];
+  DB.genres  = [...S.genres];
+}
+
+let _saveBannerTimer;
+function showSaveBanner(text) {
+  const b = document.getElementById("save-banner");
+  if (text) b.textContent = text;
+  b.classList.add("show");
+  clearTimeout(_saveBannerTimer);
+  if (text && !text.includes("⏳")) {
+    _saveBannerTimer = setTimeout(() => b.classList.remove("show"), 2500);
+  }
+}
+
+function showToast(msg, dur=2400) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("show"),dur);
+}
+
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function nextId(arr){ return arr.length ? Math.max(...arr.map(x=>x.id))+1 : 1; }
+
+// ══════════════════════════════════════════════════════════
+//  НАВИГАЦИЯ — определена ниже в блоке AUTH
+// ══════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════
+//  DRAG & DROP + IMAGE RESIZE
+// ══════════════════════════════════════════════════════════
+function resizeImage(file, size, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      // Crop to square from center
+      const min = Math.min(img.width, img.height);
+      const sx  = (img.width  - min) / 2;
+      const sy  = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      cb(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function dzOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add("dragover"); }
+function dzLeave(id)   { document.getElementById(id).classList.remove("dragover"); }
+
+function dzDrop(e, dzId, hiddenId) {
+  e.preventDefault();
+  dzLeave(dzId);
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith("image/")) { showToast("⚠️ Только изображения"); return; }
+  const prevId = document.getElementById(dzId).querySelector(".dz-preview").id;
+  processImageFile(file, prevId, hiddenId);
+}
+
+function dzFileInput(input, dzId, prevId, hiddenId) {
+  const file = input.files[0];
+  if (!file) return;
+  processImageFile(file, prevId, hiddenId);
+  input.value = "";
+}
+
+function processImageFile(file, prevId, hiddenId) {
+  const size = hiddenId.includes("artist") ? 200 : 300;
+  resizeImage(file, size, (dataUrl) => {
+    const prev = document.getElementById(prevId);
+    prev.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover">`;
+    document.getElementById(hiddenId).value = dataUrl;
+    // Сбросить URL-поле
+    const urlField = hiddenId.replace("-data","-url");
+    const urlEl = document.getElementById(urlField);
+    if (urlEl) urlEl.value = "";
+  });
+}
+
+function previewUrl(url, prevId) {
+  if (!url) return;
+  const prev = document.getElementById(prevId);
+  prev.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='🖼'">`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  ТРЕКИ
+// ══════════════════════════════════════════════════════════
+function populateTrackSelects() {
+  const artistSel = document.getElementById("t-artist");
+  const genreSel  = document.getElementById("t-genre");
+
+  artistSel.innerHTML = S.artists.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");
+  genreSel.innerHTML  = S.genres.map(g=>`<option value="${g.id}">${g.icon||""} ${esc(g.name)}</option>`).join("");
+
+  updateAlbumsByArtist();
+}
+
+function updateAlbumsByArtist() {
+  const artistId = +document.getElementById("t-artist").value;
+  const albumSel  = document.getElementById("t-album");
+  const albums = S.albums.filter(a => a.artist_id === artistId);
+
+  albumSel.innerHTML = `<option value="0">— Без альбома —</option>` +
+    albums.map(a=>`<option value="${a.id}">${esc(a.title)} (${a.year})</option>`).join("");
+}
+
+function saveTrack() {
+  const title    = document.getElementById("t-title").value.trim();
+  const artistId = +document.getElementById("t-artist").value;
+  const albumId  = +document.getElementById("t-album").value;
+  const genreId  = +document.getElementById("t-genre").value;
+  const year     = +document.getElementById("t-year").value || new Date().getFullYear();
+  const file     = document.getElementById("t-file").value.trim();
+  const coverData= document.getElementById("t-cover-data").value;
+  const coverUrl = document.getElementById("t-cover-url").value.trim();
+  const cover    = coverData || coverUrl || "";
+  const editId   = document.getElementById("et-id").value;
+
+  if (!title) { showToast("⚠️ Введи название трека"); return; }
+  if (!file)  { showToast("⚠️ Укажи файл трека"); return; }
+
+  if (editId) {
+    const idx = S.tracks.findIndex(t=>t.id===+editId);
+    if (idx>-1) S.tracks[idx] = { ...S.tracks[idx], title, artist_id:artistId, album_id:albumId||null, genre_id:genreId, year, file, cover: cover||S.tracks[idx].cover };
+    showToast("✅ Трек обновлён");
+  } else {
+    S.tracks.push({ id:nextId(S.tracks), title, artist_id:artistId, album_id:albumId||null, genre_id:genreId, year, file, cover, duration:0 });
+    showToast("✅ Трек добавлен");
+  }
+
+  persistState(); patchLiveDB();
+  resetTrackForm(); renderTracksTable();
+}
+
+function editTrack(id) {
+  const t = S.tracks.find(x=>x.id===id); if(!t) return;
+  document.getElementById("et-id").value    = t.id;
+  document.getElementById("t-title").value  = t.title;
+  document.getElementById("t-year").value   = t.year;
+  document.getElementById("t-file").value   = t.file;
+  document.getElementById("t-cover-url").value = (!t.cover?.startsWith("data:")) ? (t.cover||"") : "";
+  document.getElementById("t-artist").value = t.artist_id;
+  updateAlbumsByArtist();
+  setTimeout(()=>{ document.getElementById("t-album").value = t.album_id||0; },50);
+  document.getElementById("t-genre").value  = t.genre_id;
+  if(t.cover) previewUrl(t.cover, "dz-track-prev");
+  document.getElementById("track-form-title").textContent = "✏️ Редактировать трек";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// deleteTrack defined below
+
+function resetTrackForm() {
+  ["et-id","t-title","t-year","t-file","t-cover-data","t-cover-url"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("dz-track-prev").innerHTML = "🖼";
+  document.getElementById("track-form-title").textContent = "➕ Добавить трек";
+  populateTrackSelects();
+}
+
+
+
+// ══════════════════════════════════════════════════════════
+//  ИСПОЛНИТЕЛИ
+// ══════════════════════════════════════════════════════════
+function saveArtist() {
+  const name   = document.getElementById("a-name").value.trim();
+  const country= document.getElementById("a-country").value.trim() || "—";
+  const bio    = document.getElementById("a-bio").value.trim();
+  const photoData = document.getElementById("a-photo-data").value;
+  const photoUrl  = document.getElementById("a-photo-url").value.trim();
+  const photo  = photoData || photoUrl || `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(name)}`;
+  const editId = document.getElementById("ea-id").value;
+
+  if (!name) { showToast("⚠️ Введи имя исполнителя"); return; }
+
+  if (editId) {
+    const idx = S.artists.findIndex(a=>a.id===+editId);
+    if (idx>-1) S.artists[idx] = { ...S.artists[idx], name, country, bio, photo };
+    showToast("✅ Исполнитель обновлён");
+  } else {
+    S.artists.push({ id:nextId(S.artists), name, country, bio, photo, genre_id:1 });
+    showToast("✅ Исполнитель добавлен");
+  }
+
+  persistState(); patchLiveDB();
+  resetArtistForm(); renderArtistsTable();
+}
+
+function editArtist(id) {
+  const a = S.artists.find(x=>x.id===id); if(!a) return;
+  document.getElementById("ea-id").value      = a.id;
+  document.getElementById("a-name").value     = a.name;
+  document.getElementById("a-country").value  = a.country;
+  document.getElementById("a-bio").value      = a.bio||"";
+  document.getElementById("a-photo-url").value= (!a.photo?.startsWith("data:")) ? (a.photo||"") : "";
+  if(a.photo) previewUrl(a.photo, "dz-artist-prev");
+  document.getElementById("artist-form-title").textContent = "✏️ Редактировать исполнителя";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// deleteArtist defined below
+
+function resetArtistForm() {
+  ["ea-id","a-name","a-country","a-bio","a-photo-data","a-photo-url"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("dz-artist-prev").innerHTML = "👤";
+  document.getElementById("artist-form-title").textContent = "➕ Добавить исполнителя";
+}
+
+
+
+// ══════════════════════════════════════════════════════════
+//  АЛЬБОМЫ
+// ══════════════════════════════════════════════════════════
+function populateAlbumSelects() {
+  document.getElementById("al-artist").innerHTML =
+    S.artists.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");
+}
+
+function saveAlbum() {
+  const title    = document.getElementById("al-title").value.trim();
+  const artistId = +document.getElementById("al-artist").value;
+  const year     = +document.getElementById("al-year").value || new Date().getFullYear();
+  const coverData= document.getElementById("al-cover-data").value;
+  const coverUrl = document.getElementById("al-cover-url").value.trim();
+  const cover    = coverData || coverUrl || `https://picsum.photos/seed/${Date.now()}/300/300`;
+  const editId   = document.getElementById("eal-id").value;
+
+  if (!title) { showToast("⚠️ Введи название альбома"); return; }
+
+  if (editId) {
+    const idx = S.albums.findIndex(a=>a.id===+editId);
+    if (idx>-1) S.albums[idx] = { ...S.albums[idx], title, artist_id:artistId, year, cover };
+    showToast("✅ Альбом обновлён");
+  } else {
+    S.albums.push({ id:nextId(S.albums), title, artist_id:artistId, year, cover });
+    showToast("✅ Альбом добавлен");
+  }
+
+  persistState(); patchLiveDB();
+  resetAlbumForm(); renderAlbumsTable();
+}
+
+function editAlbum(id) {
+  const a = S.albums.find(x=>x.id===id); if(!a) return;
+  document.getElementById("eal-id").value      = a.id;
+  document.getElementById("al-title").value    = a.title;
+  document.getElementById("al-artist").value   = a.artist_id;
+  document.getElementById("al-year").value     = a.year;
+  document.getElementById("al-cover-url").value= (!a.cover?.startsWith("data:")) ? (a.cover||"") : "";
+  if(a.cover) previewUrl(a.cover, "dz-album-prev");
+  document.getElementById("album-form-title").textContent = "✏️ Редактировать альбом";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// deleteAlbum defined below
+
+function resetAlbumForm() {
+  ["eal-id","al-title","al-year","al-cover-data","al-cover-url"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("dz-album-prev").innerHTML = "🖼";
+  document.getElementById("album-form-title").textContent = "➕ Добавить альбом";
+}
+
+
+
+// ══════════════════════════════════════════════════════════
+//  ЖАНРЫ
+// ══════════════════════════════════════════════════════════
+function saveGenre() {
+  const name  = document.getElementById("g-name").value.trim();
+  const icon  = document.getElementById("g-icon").value.trim() || "🎵";
+  const color = document.getElementById("g-color").value;
+  const editId= document.getElementById("eg-id").value;
+
+  if (!name) { showToast("⚠️ Введи название жанра"); return; }
+
+  if (editId) {
+    const idx = S.genres.findIndex(g=>g.id===+editId);
+    if (idx>-1) S.genres[idx] = { ...S.genres[idx], name, icon, color };
+    showToast("✅ Жанр обновлён");
+  } else {
+    S.genres.push({ id: nextId(S.genres), name, icon, color });
+    showToast("✅ Жанр добавлен");
+  }
+
+  persistState(); patchLiveDB();
+  resetGenreForm(); renderGenresTable();
+}
+
+function editGenre(id) {
+  const g = S.genres.find(x=>x.id===id); if(!g) return;
+  document.getElementById("eg-id").value   = g.id;
+  document.getElementById("g-name").value  = g.name;
+  document.getElementById("g-color").value = g.color||"#a855f7";
+  setEmojiValue(g.icon||"🎵");
+  document.getElementById("genre-form-title").textContent = "✏️ Редактировать жанр";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// deleteGenre defined below
+
+function resetGenreForm() {
+  ["eg-id","g-name"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("g-color").value = "#a855f7";
+  setEmojiValue("🎵");
+  document.getElementById("genre-form-title").textContent = "➕ Добавить жанр";
+}
+
+function renderGenresTable() {
+  const tb = document.getElementById("g-table");
+  if (!S.genres.length) { tb.innerHTML=`<tr class="empty-row"><td colspan="4">Жанров нет</td></tr>`; return; }
+  tb.innerHTML = `
+    <thead><tr><th>Жанр</th><th>Иконка</th><th>Цвет</th><th>Треков</th><th></th></tr></thead>
+    <tbody>${S.genres.map(g=>{
+      const cnt = S.tracks.filter(t=>t.genre_id===g.id).length;
+      return `<tr>
+        <td><b>${esc(g.name)}</b></td>
+        <td style="font-size:20px">${g.icon||""}</td>
+        <td><span class="genre-pill-edit">
+          <span class="color-dot" style="background:${esc(g.color)}"></span>
+          ${esc(g.color)}
+        </span></td>
+        <td>${cnt}</td>
+        <td><div class="td-btns">
+          <button class="btn-e" onclick="editGenre(${g.id})">✏️</button>
+          <button class="btn-d" onclick="deleteGenre(${g.id})" ${cnt>0?'title="Есть треки"':""}>🗑</button>
+        </div></td>
+      </tr>`;
+    }).join("")}</tbody>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  EMOJI PICKER
+// ══════════════════════════════════════════════════════════
+const EMOJI_LIST = [
+  // Музыка
+  "🎵","🎶","🎸","🎹","🎺","🎻","🥁","🎷","🎙","🎤","🎧","📻","🎼","🎾",
+  // Настроение / жанры
+  "⚡","🔥","❄️","🌊","🌙","☀️","⭐","💫","✨","💥","🌈","🎆","🎇","🪩",
+  // Природа
+  "🌿","🍃","🌸","🌺","🌻","🍀","🌴","🏔","🌅","🌃","🌆","🏙",
+  // Эмоции
+  "❤️","💜","💙","💚","🧡","🤍","🖤","💔","😎","🥶","😤","🥳","😈","👻","💀","🤖",
+  // Стили
+  "🤘","✌️","👊","💪","🙌","👑","💎","🏆","🎯","🎪","🎠","🎡",
+  // Разное музыкальное
+  "📀","💿","📼","🎬","🎭","🎨","🖼","🎲","🃏","♠️","♣️","♥️","♦️",
+  // Животные
+  "🦁","🐯","🐺","🦊","🦅","🦋","🐉","🦄","🐙","🦈",
+  // Символы
+  "🔮","⚗️","🧲","🔑","⚙️","🛸","🚀","🌐","📡",
+];
+
+function setEmojiValue(emoji) {
+  document.getElementById("g-icon").value = emoji;
+  document.getElementById("g-icon-preview").textContent = emoji;
+}
+
+function toggleEmojiPicker() {
+  const picker = document.getElementById("emoji-picker");
+  const isOpen = picker.style.display !== "none";
+  if (isOpen) { picker.style.display = "none"; return; }
+
+  // Рендерим эмодзи
+  const grid = document.getElementById("emoji-grid");
+  const current = document.getElementById("g-icon").value;
+  grid.innerHTML = EMOJI_LIST.map(e => `
+    <button type="button" onclick="selectEmoji('${e}')"
+      style="font-size:22px;padding:5px;border-radius:8px;border:2px solid ${e===current?'var(--accent-1)':'transparent'};
+             background:${e===current?'rgba(192,38,211,.15)':'transparent'};cursor:pointer;
+             transition:all .15s;line-height:1"
+      onmouseover="this.style.background='rgba(255,255,255,.08)'"
+      onmouseout="this.style.background='${e===current?'rgba(192,38,211,.15)':'transparent'}'"
+    >${e}</button>
+  `).join("");
+
+  picker.style.display = "block";
+
+  // Закрыть при клике снаружи
+  setTimeout(() => {
+    document.addEventListener("click", closePicker);
+  }, 10);
+}
+
+function closePicker(e) {
+  const picker = document.getElementById("emoji-picker");
+  const btn    = document.getElementById("g-icon-btn");
+  if (!picker.contains(e.target) && !btn.contains(e.target)) {
+    picker.style.display = "none";
+    document.removeEventListener("click", closePicker);
+  }
+}
+
+function selectEmoji(emoji) {
+  setEmojiValue(emoji);
+  document.getElementById("emoji-picker").style.display = "none";
+  document.removeEventListener("click", closePicker);
+}
+
+// ══════════════════════════════════════════════════════════
+//  КАСТОМНЫЙ ПОПАП ПОДТВЕРЖДЕНИЯ
+// ══════════════════════════════════════════════════════════
+function customConfirm(message, onConfirm) {
+  const overlay = document.getElementById("confirm-overlay");
+  document.getElementById("confirm-message").textContent = message;
+  overlay.classList.add("open");
+  // Ставим колбэк
+  window._confirmCb = onConfirm;
+}
+
+function confirmYes() {
+  document.getElementById("confirm-overlay").classList.remove("open");
+  if (window._confirmCb) { window._confirmCb(); window._confirmCb = null; }
+}
+
+function confirmNo() {
+  document.getElementById("confirm-overlay").classList.remove("open");
+  window._confirmCb = null;
+}
+
+// Заменяем все confirm() в функциях удаления на кастомный
+function deleteTrack(id) {
+  customConfirm("Удалить трек? Это действие нельзя отменить.", () => {
+    S.tracks = S.tracks.filter(t=>t.id!==id);
+    persistState(); patchLiveDB(); renderTracksTable();
+    showToast("🗑 Трек удалён");
+  });
+}
+
+function deleteArtist(id) {
+  const albumIds = S.albums.filter(a=>a.artist_id===id).map(a=>a.id);
+  const trackCnt = S.tracks.filter(t=>albumIds.includes(t.album_id)).length;
+  customConfirm(`Удалить исполнителя и все его альбомы (${albumIds.length} шт.) и треки (${trackCnt} шт.)?`, () => {
+    S.artists = S.artists.filter(a=>a.id!==id);
+    S.albums  = S.albums.filter(a=>a.artist_id!==id);
+    S.tracks  = S.tracks.filter(t=>!albumIds.includes(t.album_id));
+    persistState(); patchLiveDB();
+    renderArtistsTable(); renderTracksTable();
+    showToast("🗑 Исполнитель удалён");
+  });
+}
+
+function deleteAlbum(id) {
+  const trackCnt = S.tracks.filter(t=>t.album_id===id).length;
+  customConfirm(`Удалить альбом и все его треки (${trackCnt} шт.)?`, () => {
+    S.albums = S.albums.filter(a=>a.id!==id);
+    S.tracks = S.tracks.filter(t=>t.album_id!==id);
+    persistState(); patchLiveDB();
+    renderAlbumsTable(); renderTracksTable();
+    showToast("🗑 Альбом удалён");
+  });
+}
+
+function deleteGenre(id) {
+  if (S.tracks.some(t=>t.genre_id===id)) {
+    showToast("⚠️ Нельзя удалить жанр, к которому привязаны треки"); return;
+  }
+  customConfirm("Удалить жанр?", () => {
+    S.genres = S.genres.filter(g=>g.id!==id);
+    persistState(); patchLiveDB(); renderGenresTable();
+    showToast("🗑 Жанр удалён");
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  ПОИСК, ФИЛЬТРЫ, ПАГИНАЦИЯ
+// ══════════════════════════════════════════════════════════
+const PAGE_SIZE = 10;
+let tPage = 1, aPage = 1, alPage = 1;
+
+function paginateBtn(page, total, pages, setter, renderer) {
+  if (pages <= 1) return "";
+  let html = "";
+  for (let i = 1; i <= pages; i++) {
+    html += `<button onclick="${setter}(${i})"
+      style="width:32px;height:32px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
+             border:1px solid ${i===page?'var(--accent-1)':'var(--border)'};
+             background:${i===page?'var(--grad-main)':'var(--bg-elevated)'};
+             color:${i===page?'#fff':'var(--text-secondary)'};transition:all .15s"
+      onmouseover="if(${i}!==${page})this.style.borderColor='var(--border-accent)'"
+      onmouseout="if(${i}!==${page})this.style.borderColor='var(--border)'"
+    >${i}</button>`;
+  }
+  return html;
+}
+
+// ── ТРЕКИ: фильтр + пагинация ─────────────────────────────
+function populateTrackFilters() {
+  const gSel = document.getElementById("t-filter-genre");
+  const aSel = document.getElementById("t-filter-artist");
+  if (!gSel || !aSel) return;
+  gSel.innerHTML = `<option value="0">Все жанры</option>` +
+    S.genres.map(g=>`<option value="${g.id}">${g.icon||""} ${esc(g.name)}</option>`).join("");
+  aSel.innerHTML = `<option value="0">Все исполнители</option>` +
+    S.artists.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");
+}
+
+function getFilteredTracks() {
+  const q       = (document.getElementById("t-search")?.value||"").toLowerCase();
+  const genreId = +(document.getElementById("t-filter-genre")?.value||0);
+  const artId   = +(document.getElementById("t-filter-artist")?.value||0);
+  return S.tracks.filter(t => {
+    const artist = S.artists.find(a=>a.id===t.artist_id);
+    const matchQ = !q || t.title.toLowerCase().includes(q) || (artist&&artist.name.toLowerCase().includes(q));
+    const matchG = !genreId || t.genre_id===genreId;
+    const matchA = !artId   || t.artist_id===artId;
+    return matchQ && matchG && matchA;
+  });
+}
+
+function filterTracksTable() { tPage=1; renderTracksTable(); }
+function setTPage(p) { tPage=p; renderTracksTable(); }
+
+function renderTracksTable() {
+  const tb = document.getElementById("t-table");
+  const pg = document.getElementById("t-pagination");
+  const filtered = getFilteredTracks();
+  const pages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (tPage > pages) tPage = Math.max(1, pages);
+  const slice = filtered.slice((tPage-1)*PAGE_SIZE, tPage*PAGE_SIZE);
+
+  document.getElementById("tc").textContent = `(${filtered.length} из ${S.tracks.length})`;
+
+  if (!filtered.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="7">Ничего не найдено</td></tr>`;
+    if(pg) pg.innerHTML = "";
+    return;
+  }
+  tb.innerHTML = `
+    <thead><tr><th>Обл.</th><th>Название</th><th>Исполнитель</th><th>Жанр</th><th>Год</th><th>Файл</th><th></th></tr></thead>
+    <tbody>${slice.map(t=>{
+      const artist = S.artists.find(a=>a.id===t.artist_id);
+      const album  = S.albums.find(a=>a.id===t.album_id);
+      const genre  = S.genres.find(g=>g.id===t.genre_id);
+      const cover  = t.cover || album?.cover || "";
+      return `<tr>
+        <td><img class="thumb" src="${esc(cover)}" onerror="this.style.display='none'"></td>
+        <td><b>${esc(t.title)}</b></td>
+        <td>${esc(artist?.name||"—")}</td>
+        <td><span style="font-size:12px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid var(--border)">${genre?.icon||""} ${esc(genre?.name||"")}</span></td>
+        <td>${t.year}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:11px" title="${esc(t.file)}">${esc(t.file)}</td>
+        <td><div class="td-btns">
+          <button class="btn-e" onclick="editTrack(${t.id})">✏️</button>
+          <button class="btn-d" onclick="deleteTrack(${t.id})">🗑</button>
+        </div></td>
+      </tr>`;
+    }).join("")}</tbody>`;
+  if(pg) pg.innerHTML = paginateBtn(tPage, filtered.length, pages, "setTPage", "renderTracksTable");
+}
+
+// ── ИСПОЛНИТЕЛИ: поиск + пагинация ───────────────────────
+function getFilteredArtists() {
+  const q = (document.getElementById("a-search")?.value||"").toLowerCase();
+  return S.artists.filter(a => !q || a.name.toLowerCase().includes(q) || (a.country||"").toLowerCase().includes(q));
+}
+
+function filterArtistsTable() { aPage=1; renderArtistsTable(); }
+function setAPage(p) { aPage=p; renderArtistsTable(); }
+
+function renderArtistsTable() {
+  const grid = document.getElementById("a-cards-grid");
+  const pg   = document.getElementById("a-pagination");
+  const filtered = getFilteredArtists();
+  const pages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (aPage > pages) aPage = Math.max(1, pages);
+  const slice = filtered.slice((aPage-1)*PAGE_SIZE, aPage*PAGE_SIZE);
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--text-muted)">Ничего не найдено</div>`;
+    if(pg) pg.innerHTML=""; return;
+  }
+
+  grid.innerHTML = slice.map(a => {
+    const albumIds = S.albums.filter(x=>x.artist_id===a.id).map(x=>x.id);
+    const cnt = S.tracks.filter(t=>albumIds.includes(t.album_id)||t.artist_id===a.id).length;
+    const alCnt = albumIds.length;
+    return `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:14px;
+                 padding:16px;text-align:center;transition:border-color .2s"
+                 onmouseover="this.style.borderColor='var(--border-accent)'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+      <img src="${esc(a.photo)}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;
+           background:var(--bg-base);margin:0 auto 10px;display:block;border:2px solid var(--border)"
+           onerror="this.style.display='none'">
+      <div style="font-size:14px;font-weight:700;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${esc(a.country)} · ${cnt} тр. · ${alCnt} альб.</div>
+      <div style="display:flex;gap:6px;justify-content:center">
+        <button class="btn-e" onclick="editArtist(${a.id})" style="flex:1">✏️ Правка</button>
+        <button class="btn-d" onclick="deleteArtist(${a.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  if(pg) pg.innerHTML = paginateBtn(aPage, filtered.length, pages, "setAPage", "renderArtistsTable");
+}
+
+// ── АЛЬБОМЫ: поиск + пагинация ────────────────────────────
+function populateAlbumFilters() {
+  const sel = document.getElementById("al-filter-artist");
+  if (!sel) return;
+  sel.innerHTML = `<option value="0">Все исполнители</option>` +
+    S.artists.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");
+}
+
+function getFilteredAlbums() {
+  const q     = (document.getElementById("al-search")?.value||"").toLowerCase();
+  const artId = +(document.getElementById("al-filter-artist")?.value||0);
+  return S.albums.filter(a => {
+    const artist = S.artists.find(x=>x.id===a.artist_id);
+    const matchQ = !q || a.title.toLowerCase().includes(q) || (artist&&artist.name.toLowerCase().includes(q));
+    const matchA = !artId || a.artist_id===artId;
+    return matchQ && matchA;
+  });
+}
+
+function filterAlbumsTable() { alPage=1; renderAlbumsTable(); }
+function setAlPage(p) { alPage=p; renderAlbumsTable(); }
+
+function renderAlbumsTable() {
+  const grid = document.getElementById("al-cards-grid");
+  const pg   = document.getElementById("al-pagination");
+  const filtered = getFilteredAlbums();
+  const pages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (alPage > pages) alPage = Math.max(1, pages);
+  const slice = filtered.slice((alPage-1)*PAGE_SIZE, alPage*PAGE_SIZE);
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--text-muted)">Ничего не найдено</div>`;
+    if(pg) pg.innerHTML=""; return;
+  }
+
+  grid.innerHTML = slice.map(a => {
+    const artist = S.artists.find(x=>x.id===a.artist_id);
+    const tCnt   = S.tracks.filter(t=>t.album_id===a.id).length;
+    const cover  = a.cover || "";
+    return `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:14px;
+                 overflow:hidden;transition:border-color .2s;cursor:default"
+                 onmouseover="this.style.borderColor='var(--border-accent)'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+      ${cover
+        ? `<img src="${esc(cover)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" onerror="this.style.display='none'">`
+        : `<div style="width:100%;aspect-ratio:1;background:var(--bg-base);display:flex;align-items:center;justify-content:center;font-size:36px">💿</div>`
+      }
+      <div style="padding:12px">
+        <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px">${esc(a.title)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">${esc(artist?.name||"—")} · ${a.year} · ${tCnt} тр.</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-e" onclick="editAlbum(${a.id})" style="flex:1">✏️ Правка</button>
+          <button class="btn-d" onclick="deleteAlbum(${a.id})">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  if(pg) pg.innerHTML = paginateBtn(alPage, filtered.length, pages, "setAlPage", "renderAlbumsTable");
+}
+
+// ══════════════════════════════════════════════════════════
+//  AUTH — Логин / Выход
+// ══════════════════════════════════════════════════════════
+function doLogin() {
+  const login = document.getElementById("login-input").value.trim();
+  const pass  = document.getElementById("login-pass").value;
+  const err   = document.getElementById("login-error");
+
+  if (!login || !pass) { err.textContent = "Заполни оба поля"; return; }
+
+  if (Auth.login(login, pass)) {
+    document.getElementById("login-screen").classList.add("hidden");
+    err.textContent = "";
+    initAdmin();
+  } else {
+    err.textContent = "Неверный логин или пароль";
+    document.getElementById("login-pass").value = "";
+    document.getElementById("login-pass").focus();
+  }
+}
+
+// Смена логина и пароля
+function saveAccountCredentials() {
+  const newLogin = document.getElementById("new-login").value.trim();
+  const newPass  = document.getElementById("new-pass").value;
+  const newPass2 = document.getElementById("new-pass2").value;
+
+  if (!newLogin) { showToast("⚠️ Введи новый логин"); return; }
+  if (!newPass)  { showToast("⚠️ Введи новый пароль"); return; }
+  if (newPass.length < 4) { showToast("⚠️ Пароль минимум 4 символа"); return; }
+  if (newPass !== newPass2) { showToast("⚠️ Пароли не совпадают"); return; }
+
+  Auth.update(newLogin, newPass);
+
+  document.getElementById("new-login").value = "";
+  document.getElementById("new-pass").value  = "";
+  document.getElementById("new-pass2").value = "";
+  document.getElementById("current-login-display").textContent = newLogin;
+
+  showToast("✅ Логин и пароль изменены! При следующем входе используй новые данные.");
+}
+
+// ══════════════════════════════════════════════════════════
+//  MP3 DRAG & DROP — читает файл, извлекает метаданные
+// ══════════════════════════════════════════════════════════
+function dzDropMp3(e) {
+  e.preventDefault();
+  dzLeave("dz-mp3");
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.type.includes("audio") && !file.name.endsWith(".mp3")) {
+    showToast("⚠️ Выбери MP3 файл"); return;
+  }
+  processMp3File(file);
+}
+
+function mp3FileInput(input) {
+  const file = input.files[0];
+  if (!file) return;
+  processMp3File(file);
+  input.value = "";
+}
+
+function processMp3File(file) {
+  // 1. Показываем имя файла в зоне
+  const nameEl = document.getElementById("dz-mp3-name");
+  nameEl.textContent = "⏳ Обрабатываю: " + file.name;
+
+  // 2. Подставляем название из имени файла (убираем расширение)
+  const rawName = file.name.replace(/\.mp3$/i, "").replace(/[-_]/g, " ").trim();
+  // Capitalize first letter
+  const prettyName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+  if (!document.getElementById("t-title").value) {
+    document.getElementById("t-title").value = prettyName;
+  }
+
+  // 3. Читаем длительность через Audio API
+  const url = URL.createObjectURL(file);
+  const tmpAudio = new Audio();
+  tmpAudio.src = url;
+  tmpAudio.onloadedmetadata = () => {
+    const dur = Math.round(tmpAudio.duration);
+    URL.revokeObjectURL(url);
+    nameEl.textContent = "✅ " + file.name + " (" + Player_fmtTime(dur) + ")";
+
+    // 4. Конвертируем в base64 для встраивания
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const b64 = e.target.result; // data:audio/mpeg;base64,...
+      document.getElementById("t-file").value = b64;
+      showToast("✅ MP3 загружен, длительность " + Player_fmtTime(dur));
+    };
+    reader.onerror = () => {
+      // Если base64 не нужен — просто оставляем путь пустым
+      nameEl.textContent = "✅ " + file.name + " — укажи путь к файлу вручную";
+    };
+    reader.readAsDataURL(file);
+  };
+  tmpAudio.onerror = () => {
+    nameEl.textContent = "❌ Не удалось прочитать файл";
+    URL.revokeObjectURL(url);
+  };
+}
+
+// Форматирование времени без обращения к Player (он не подключён в admin)
+function Player_fmtTime(sec) {
+  if (!sec || isNaN(sec)) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = String(Math.floor(sec % 60)).padStart(2, "0");
+  return m + ":" + s;
+}
+
+// showPage — добавляем поддержку вкладки account
+const _origShowPage = showPage;
+// Переопределяем showPage чтобы обновлять данные аккаунта
+function showPage(name) {
+  document.querySelectorAll(".admin-page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".admin-nav-item").forEach(n=>n.classList.remove("active"));
+  document.getElementById("ap-"+name).classList.add("active");
+  const navEl = document.querySelector(`.admin-nav-item[data-p="${name}"]`);
+  if (navEl) navEl.classList.add("active");
+
+  if (name==="tracks")  { populateTrackSelects(); populateTrackFilters(); renderTracksTable(); }
+  if (name==="artists") { renderArtistsTable(); }
+  if (name==="albums")  { populateAlbumSelects(); populateAlbumFilters(); renderAlbumsTable(); }
+  if (name==="genres")  renderGenresTable();
+  if (name==="account") {
+    document.getElementById("current-login-display").textContent = Auth.getLogin();
+    document.getElementById("new-login").value = Auth.getLogin();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+async function initAdmin() {
+  showSaveBanner("⏳ Загрузка данных из Firebase...");
+
+  // Сначала пробуем загрузить из кеша (быстро)
+  const cached = localStorage.getItem("sw_firebase_cache");
+  if (cached) {
+    try {
+      const d = JSON.parse(cached);
+      if (d.artists) S.artists = d.artists;
+      if (d.albums)  S.albums  = d.albums;
+      if (d.tracks)  S.tracks  = d.tracks;
+      if (d.genres)  S.genres  = d.genres;
+    } catch(e) {}
+  }
+
+  // Загружаем свежие данные из Firebase
+  const data = await Firebase.loadAll();
+  if (data) {
+    if (data.artists) S.artists = data.artists;
+    if (data.albums)  S.albums  = data.albums;
+    if (data.tracks)  S.tracks  = data.tracks;
+    if (data.genres)  S.genres  = data.genres;
+    showSaveBanner("✓ Данные загружены");
+  } else {
+    showSaveBanner("⚠️ Firebase недоступен, работаю с кешем");
+  }
+
+  patchLiveDB();
+  populateTrackSelects();
+  populateTrackFilters();
+  populateAlbumFilters();
+  renderTracksTable();
+  setEmojiValue("🎵");
+}
+
+function doLogout() {
+  Auth.logout();
+  // Показываем экран логина, скрываем контент
+  const screen = document.getElementById("login-screen");
+  screen.classList.remove("hidden");
+  // Сбрасываем поля
+  document.getElementById("login-input").value = "";
+  document.getElementById("login-pass").value  = "";
+  document.getElementById("login-error").textContent = "";
+  setTimeout(() => document.getElementById("login-input").focus(), 100);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (Auth.isLoggedIn()) {
+    document.getElementById("login-screen").classList.add("hidden");
+    initAdmin();
+  } else {
+    setTimeout(() => document.getElementById("login-input").focus(), 100);
+    document.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !document.getElementById("login-screen").classList.contains("hidden")) {
+        doLogin();
+      }
+    });
+  }
+});
+</script>
+</body>
+</html>
