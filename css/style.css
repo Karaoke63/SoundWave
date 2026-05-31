@@ -1,7 +1,10 @@
 /* ============================================================
    SoundWave — Design System (v5 — комфорт на 1920×1080)
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+/* Google Fonts loaded async in <head> — see index.html */
+/* Fallback stack while fonts load */
+@font-face { font-family: 'Syne'; font-display: swap; }
+@font-face { font-family: 'DM Sans'; font-display: swap; }
 
 /* ── Переменные ──────────────────────────────────────────── */
 :root {
@@ -724,7 +727,7 @@ input, select { font-family: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE (desktop/tablet — mobile in mobile-player.css)
    ═══════════════════════════════════════════════════════════ */
 @media (max-width: 1100px) {
   :root { --sidebar-w: 240px; }
@@ -735,13 +738,4 @@ input, select { font-family: inherit; }
   .sidebar-logo .logo-text { display: none; }
   .sidebar-section-title { display: none; }
   .playlist-item-sidebar { display: none; }
-}
-@media (max-width: 640px) {
-  #app { grid-template-columns: 1fr; grid-template-areas: "main" "player"; }
-  #sidebar { display: none; }
-  .page { padding: 20px 16px 30px; }
-  #player { grid-template-columns: 1fr; padding: 0 14px; }
-  .player-extras { display: none; }
-  .track-row { grid-template-columns: 36px 1fr 60px 32px; }
-  .track-row .track-genre-badge, .track-row .track-year { display: none; }
 }
