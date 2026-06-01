@@ -112,10 +112,10 @@ const DB = {
   ],
 
   // ── Helpers ────────────────────────────────────────────────
-  getArtist(id)     { return this.artists.find(a => a.id === id); },
-  getAlbum(id)      { return this.albums.find(a => a.id === id); },
-  getGenre(id)      { return this.genres.find(g => g.id === id); },
-  getTrack(id)      { return this.tracks.find(t => t.id === id); },
+  getArtist(id)     { return this.artists.find(a => +a.id === +id); },
+  getAlbum(id)      { return this.albums.find(a => +a.id === +id); },
+  getGenre(id)      { return this.genres.find(g => +g.id === +id); },
+  getTrack(id)      { return this.tracks.find(t => +t.id === +id); },
 
   getTrackFull(track) {
     return {
@@ -134,7 +134,7 @@ const DB = {
 
   filterTracksByGenre(genre_id) {
     return genre_id
-      ? this.tracks.filter(t => t.genre_id === genre_id)
+      ? this.tracks.filter(t => +t.genre_id === +genre_id)
       : [...this.tracks];
   },
 
@@ -148,11 +148,11 @@ const DB = {
   },
 
   getAlbumTracks(album_id) {
-    return this.tracks.filter(t => t.album_id === album_id);
+    return this.tracks.filter(t => +t.album_id === +album_id);
   },
 
   getArtistAlbums(artist_id) {
-    return this.albums.filter(a => a.artist_id === artist_id);
+    return this.albums.filter(a => +a.artist_id === +artist_id);
   },
 
   countByGenre() {
