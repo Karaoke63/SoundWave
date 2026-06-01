@@ -516,9 +516,6 @@ input, select { font-family: inherit; }
   position: relative; z-index: 100;
 }
 /* Player left/center/right sections */
-.player-track   { flex: 0 0 clamp(180px, 28%, 300px); min-width: 0; display: flex; align-items: center; gap: 16px; }
-.player-controls{ flex: 1 1 auto; min-width: 200px; }
-.player-extras  { flex: 0 0 clamp(140px, 20%, 240px); }
 
 .player-cover {
   width: 70px; height: 70px;
@@ -546,6 +543,7 @@ input, select { font-family: inherit; }
 .player-like:hover { color: var(--accent-3); }
 .player-like.liked { color: var(--accent-3); }
 
+.player-track { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 0 0 clamp(180px, 28%, 300px); }
 .player-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 200px; }
 .player-btns { display: flex; align-items: center; gap: 26px; }
 .ctrl-btn {
