@@ -514,6 +514,7 @@ input, select { font-family: inherit; }
   padding: 0 24px;
   gap: 16px;
   position: relative; z-index: 100;
+  contain: layout style;
 }
 /* Player left/center/right sections */
 
@@ -557,9 +558,10 @@ input, select { font-family: inherit; }
   font-size: 20px;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 18px rgba(192,38,211,.45);
-  transition: transform var(--transition), opacity var(--transition);
+  transition: box-shadow var(--transition), opacity var(--transition);
+  will-change: box-shadow;
 }
-.ctrl-btn.play-main:hover { transform: scale(1.08); opacity: .9; }
+.ctrl-btn.play-main:hover { box-shadow: 0 6px 24px rgba(192,38,211,.65); opacity: .9; }
 
 .player-progress { display: flex; align-items: center; gap: 14px; width: 100%; }
 .time-label {
