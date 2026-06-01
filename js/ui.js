@@ -103,7 +103,8 @@ function renderTrackRow(track, index, queueList) {
   return `
     <div class="track-row${isPlay ? " playing" : ""}"
          data-track-id="${track.id}"
-         onclick="Player.play(${track.id}, [${ids}])">
+         onclick="Player.play(${track.id}, [${ids}])"
+         ontouchend="event.preventDefault();Player.play(${track.id}, [${ids}])">
       <div class="track-num">${isPlay ? "▶" : index + 1}</div>
       <img class="track-cover" src="${coverUrl}" alt=""
            onerror="this.style.background='var(--bg-elevated)';this.removeAttribute('src')">

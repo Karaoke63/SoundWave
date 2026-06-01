@@ -42,6 +42,7 @@ const Player = (() => {
     els.title.textContent  = t.title;
     els.artist.textContent = t.artist?.name || "—";
     els.playBtn.innerHTML = isPlaying ? "⏸" : "▶";
+    syncMobilePlayIcon();
   }
 
   audio.addEventListener("timeupdate", () => {
@@ -57,8 +58,8 @@ const Player = (() => {
     next();
   });
 
-  audio.addEventListener("play",  () => { isPlaying = true;  els.playBtn.innerHTML = "⏸"; });
-  audio.addEventListener("pause", () => { isPlaying = false; els.playBtn.innerHTML = "▶"; });
+  audio.addEventListener("play",  () => { isPlaying = true;  els.playBtn.innerHTML = "⏸"; syncMobilePlayIcon(); });
+  audio.addEventListener("pause", () => { isPlaying = false; els.playBtn.innerHTML = "▶"; syncMobilePlayIcon(); });
 
   audio.addEventListener("error", () => {
     if (stopped) return; // ESC был нажат — не переключаем
@@ -100,6 +101,19 @@ const Player = (() => {
     const rect = els.progressBar.getBoundingClientRect();
     const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     if (audio.duration) audio.currentTime = pct * audio.duration;
+  }
+
+  // Синхронизация иконки мобильной кнопки play/pause
+  function syncMobilePlayIcon() {
+    const mb = document.getElementById("m-player-play");
+    if (!mb) return;
+    if (isPlaying) {
+      mb.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="currentColor" stroke-width="0">'
+        + '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    } else {
+      mb.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="currentColor" stroke-width="0">'
+        + '<polygon points="5 3 19 12 5 21 5 3"/></svg>';
+    }
   }
 
   function init() {

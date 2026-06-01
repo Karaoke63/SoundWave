@@ -45,7 +45,7 @@ Pages.home = {
       <div class="home-hero">
         <h1>Слушай музыку.<br>Открывай новое.</h1>
         <p>Тысячи треков — бесплатно и без рекламы.<br>Создавай плейлисты, ищи исполнителей, наслаждайся.</p>
-        <button class="btn-primary" onclick="Router.go('catalog')">▶ Слушать сейчас</button>
+        <button class="btn-primary" onclick="Router.go('catalog')" style="display:inline-flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Слушать сейчас</button>
       </div>
 
       <div class="stats-row">
@@ -241,7 +241,13 @@ Pages["artist-detail"] = {
     if (!artist) return;
 
     const albums  = DB.getArtistAlbums(id);
-    const allTracks = albums.flatMap(al => DB.getAlbumTracks(al.id));
+    // Треки в альбомах
+    const albumTrackIds = new Set(albums.flatMap(al => DB.getAlbumTracks(al.id).map(t => t.id)));
+    // Все треки исполнителя (включая без альбома)
+    const allArtistTracks = DB.tracks.filter(t => +t.artist_id === +id);
+    // Треки без альбома
+    const looseTracks = allArtistTracks.filter(t => !albumTrackIds.has(t.id));
+    const allTracks = allArtistTracks;
 
     document.getElementById("page-artist-detail").innerHTML = `
       <button onclick="Router.go('artists')" style="margin-bottom:20px;color:var(--text-secondary);font-size:13px;display:flex;align-items:center;gap:6px">
@@ -257,7 +263,7 @@ Pages["artist-detail"] = {
           <div class="artist-hero-meta">
             <span>🌍 ${artist.country}</span>
             <span>💿 ${albums.length} ${albums.length === 1 ? "альбом" : "альбомов"}</span>
-            <span>🎵 ${allTracks.length} ${allTracks.length === 1 ? "трек" : "треков"}</span>
+            <span>🎵 ${allTracks.length} ${allTracks.length === 1 ? "трек" : allTracks.length < 5 ? "трека" : "треков"}</span>
           </div>
           <div class="artist-hero-bio">${escHtml(artist.bio)}</div>
         </div>
@@ -265,16 +271,17 @@ Pages["artist-detail"] = {
 
       ${albums.map(al => {
         const tracks = DB.getAlbumTracks(al.id);
+        if (!tracks.length) return '';
         return `
           <div style="margin-bottom:32px">
             <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
               <img src="${al.cover}" alt="" style="width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid var(--border)">
               <div>
                 <div style="font-family:Syne,sans-serif;font-size:16px;font-weight:700">${escHtml(al.title)}</div>
-                <div style="font-size:12px;color:var(--text-secondary)">${al.year} · ${tracks.length} треков</div>
+                <div style="font-size:12px;color:var(--text-secondary)">${al.year} · ${tracks.length} ${tracks.length===1?"трек":tracks.length<5?"трека":"треков"}</div>
               </div>
-              <button class="btn-primary" style="margin-left:auto;padding:7px 16px;font-size:12px"
-                onclick="Player.play(${tracks[0]?.id}, [${tracks.map(t=>t.id).join(",")}])">▶ Слушать</button>
+              <button class="btn-primary" style="margin-left:auto;padding:7px 16px;font-size:12px;display:inline-flex;align-items:center;gap:6px"
+                onclick="Player.play(${tracks[0]?.id}, [${tracks.map(t=>t.id).join(",")}])"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Слушать</button>
             </div>
             <div class="track-list">
               ${tracks.map((t, i) => renderTrackRow(t, i, tracks)).join("")}
@@ -282,6 +289,30 @@ Pages["artist-detail"] = {
           </div>
         `;
       }).join("")}
+
+      ${looseTracks.length > 0 ? `
+        <div style="margin-bottom:32px">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+            <div style="width:60px;height:60px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">♪</div>
+            <div>
+              <div style="font-family:Syne,sans-serif;font-size:16px;font-weight:700">Отдельные треки</div>
+              <div style="font-size:12px;color:var(--text-secondary)">${looseTracks.length} ${looseTracks.length===1?"трек":looseTracks.length<5?"трека":"треков"} · без альбома</div>
+            </div>
+            <button class="btn-primary" style="margin-left:auto;padding:7px 16px;font-size:12px;display:inline-flex;align-items:center;gap:6px"
+              onclick="Player.play(${looseTracks[0]?.id}, [${looseTracks.map(t=>t.id).join(",")}])"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Слушать</button>
+          </div>
+          <div class="track-list">
+            ${looseTracks.map((t, i) => renderTrackRow(t, i, looseTracks)).join("")}
+          </div>
+        </div>
+      ` : ""}
+
+      ${allTracks.length === 0 ? `
+        <div class="empty-state">
+          <div class="empty-icon">🎵</div>
+          <p>У исполнителя пока нет треков</p>
+        </div>
+      ` : ""}
     `;
   }
 };
