@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundWave — Музыкальный сервис</title>
+  <!-- Google Fonts: async load, no render-blocking -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap"></noscript>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mobile-player.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">♪</div>
+      <div class="logo-text">SoundWave</div>
+    </div>
+
+    <div class="sidebar-section-title">Меню</div>
+    <nav>
+      <div class="nav-item active" data-page="home" onclick="Router.go('home')">
+        <span class="nav-icon">🏠</span><span>Главная</span>
+      </div>
+      <div class="nav-item" data-page="catalog" onclick="Router.go('catalog')">
+        <span class="nav-icon">🎵</span><span>Каталог</span>
+      </div>
+      <div class="nav-item" data-page="artists" onclick="Router.go('artists')">
+        <span class="nav-icon">🎤</span><span>Исполнители</span>
+      </div>
+      <div class="nav-item" data-page="search" onclick="Router.go('search')">
+        <span class="nav-icon">🔍</span><span>Поиск</span>
+      </div>
+      <div class="nav-item" data-page="playlists" onclick="Router.go('playlists')">
+        <span class="nav-icon">📚</span><span>Мои плейлисты</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-section-title" style="margin-top:16px">Мои плейлисты</div>
+    <div class="sidebar-playlists">
+      <div id="sidebar-playlists"></div>
+    </div>
+
+
+  </aside>
+
+  <!-- ═══════════════ MAIN ═══════════════ -->
+  <main id="main">
+  <!-- Индикатор загрузки Firebase -->
+  <div id="sw-loading" style="position:fixed;inset:0;background:var(--bg-base);
+       display:flex;flex-direction:column;align-items:center;justify-content:center;
+       z-index:9999;gap:20px">
+    <div style="width:56px;height:56px;background:linear-gradient(135deg,#c026d3,#7c3aed);
+         border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px">♪</div>
+    <div style="font-family:Syne,sans-serif;font-size:22px;font-weight:800;
+         background:linear-gradient(135deg,#c026d3,#7c3aed);-webkit-background-clip:text;
+         -webkit-text-fill-color:transparent;background-clip:text">SoundWave</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="width:8px;height:8px;border-radius:50%;background:#c026d3;
+           animation:sw-dot 1.2s ease-in-out infinite"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#9333ea;
+           animation:sw-dot 1.2s ease-in-out .2s infinite"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#7c3aed;
+           animation:sw-dot 1.2s ease-in-out .4s infinite"></div>
+    </div>
+    <div id="sw-loading-text" style="font-size:13px;color:#5a5a7a">Загрузка каталога...</div>
+  </div>
+  <style>
+    @keyframes sw-dot { 0%,80%,100%{transform:scale(.6);opacity:.4} 40%{transform:scale(1);opacity:1} }
+  </style>
+
+    <!-- HOME -->
+    <div class="page active" id="page-home"></div>
+
+    <!-- CATALOG -->
+    <div class="page" id="page-catalog"></div>
+
+    <!-- ARTISTS LIST -->
+    <div class="page" id="page-artists"></div>
+
+    <!-- ARTIST DETAIL -->
+    <div class="page" id="page-artist-detail"></div>
+
+    <!-- SEARCH -->
+    <div class="page" id="page-search"></div>
+
+    <!-- PLAYLISTS -->
+    <div class="page" id="page-playlists"></div>
+
+  </main>
+
+  <!-- ═══════════════ PLAYER ═══════════════ -->
+  <footer id="player">
+
+    <!-- Mobile progress line -->
+    <div id="player-progress-line"></div>
+
+    <!-- Левая часть: трек -->
+    <div class="player-track">
+      <div id="player-cover" class="player-cover"
+           style="background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;font-size:22px">♪</div>
+      <div class="player-meta">
+        <div class="player-title" id="player-title">Выберите трек</div>
+        <div class="player-artist" id="player-artist">SoundWave</div>
+      </div>
+      <button class="player-like" id="player-like" title="Нравится" onclick="toggleLike()">♡</button>
+    </div>
+
+    <!-- Центр: управление -->
+    <div class="player-controls">
+      <div class="player-btns">
+        <button class="ctrl-btn" id="player-prev" title="Назад">⏮</button>
+        <button class="ctrl-btn play-main" id="player-play" title="Пауза/Играть">▶</button>
+        <button class="ctrl-btn" id="player-next" title="Вперёд">⏭</button>
+      </div>
+      <div class="player-progress">
+        <span class="time-label" id="time-now">0:00</span>
+        <div class="progress-bar" id="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <span class="time-label" id="time-total">0:00</span>
+      </div>
+    </div>
+
+    <!-- Правая часть: громкость -->
+    <div class="player-extras">
+      <div class="volume-wrap">
+        <span class="vol-icon">🔈</span>
+        <input type="range" class="volume-slider" id="volume-slider"
+               min="0" max="100" value="70">
+        <span class="vol-icon">🔊</span>
+      </div>
+    </div>
+
+    <!-- Mobile controls (shown only on mobile via CSS) -->
+    <div id="player-mobile-controls">
+      <button class="mctrl-btn" id="m-player-prev" aria-label="Назад"><svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="4" x2="5" y2="20"/></svg></button>
+      <button class="mctrl-btn play-main" id="m-player-play" aria-label="Пауза/Играть"><svg viewBox="0 0 24 24"><polygon class="icon-play" points="5 3 19 12 5 21 5 3"/></svg></button>
+      <button class="mctrl-btn" id="m-player-next" aria-label="Вперёд"><svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="4" x2="19" y2="20"/></svg></button>
+    </div>
+
+  </footer>
+  <!-- ═══════════════ MOBILE NAV ═══════════════ -->
+  <nav id="mobile-nav">
+    <div class="mnav-btn active" data-page="home" onclick="Router.go('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span>
+    </div>
+    <div class="mnav-btn" data-page="catalog" onclick="Router.go('catalog')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg><span>Каталог</span>
+    </div>
+    <div class="mnav-btn" data-page="artists" onclick="Router.go('artists')">
+      <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Артисты</span>
+    </div>
+    <div class="mnav-btn" data-page="search" onclick="Router.go('search')">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Поиск</span>
+    </div>
+    <div class="mnav-btn" data-page="playlists" onclick="Router.go('playlists')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>Плейлисты</span>
+    </div>
+  </nav>
+
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════ MODAL: Создать плейлист ═══════════════ -->
+<div class="modal-overlay" id="modal-create-playlist" onclick="if(event.target===this)closeCreatePlaylist()">
+  <div class="modal">
+    <div class="modal-title">Новый плейлист</div>
+    <input class="modal-input" id="modal-pl-input" type="text"
+           placeholder="Название плейлиста..."
+           onkeydown="if(event.key==='Enter')confirmCreatePlaylist()">
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeCreatePlaylist()">Отмена</button>
+      <button class="btn-primary" onclick="confirmCreatePlaylist()">✓ Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: Добавить в плейлист ═══════════════ -->
+<div class="modal-overlay" id="modal-add-to-playlist" onclick="if(event.target===this)closeAddToPlaylist()">
+  <div class="modal">
+    <div class="modal-title">Добавить в плейлист</div>
+    <div class="playlist-modal-list" id="playlist-picker-list"></div>
+    <!-- Создать новый — сохраняем trackId, открываем модалку создания, после создания добавляем трек -->
+    <div class="playlist-modal-item pm-create" onclick="createAndAddToPlaylist()">
+      <span class="pm-icon">＋</span>
+      <span>Создать новый плейлист</span>
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="btn-ghost" onclick="closeAddToPlaylist()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script src="data/db.js"></script>
+<script src="data/firebase.js"></script>
+<script src="data/playlists.js"></script>
+<script src="js/player.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pages.js"></script>
+
+<script>
+  // ── Инициализация ──────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", async () => {
+    Player.init();
+    // Мобильные кнопки управления плеером
+    const mPlay = document.getElementById("m-player-play");
+    const mPrev = document.getElementById("m-player-prev");
+    const mNext = document.getElementById("m-player-next");
+    if (mPlay) mPlay.addEventListener("click", () => Player.toggle());
+    if (mPrev) mPrev.addEventListener("click", () => Player.prev());
+    if (mNext) mNext.addEventListener("click", () => Player.next());
+    // Синхронизация мобильного прогресс-бара
+    const mLine = document.getElementById("player-progress-line");
+    if (mLine) {
+      const origFill = document.getElementById("progress-fill");
+      if (origFill) {
+        new MutationObserver(() => {
+          mLine.style.width = origFill.style.width;
+        }).observe(origFill, { attributes: true, attributeFilter: ["style"] });
+      }
+    }
+    refreshSidebarPlaylists();
+
+    const loadingEl  = document.getElementById("sw-loading");
+    const loadingTxt = document.getElementById("sw-loading-text");
+
+    // Сначала показываем кешированные данные если есть
+    const hasCached = Firebase.loadFromCache();
+    if (hasCached) {
+      loadingEl.style.display = "none";
+      Router.go("home");
+    }
+
+    // Грузим свежие данные из Firebase
+    loadingTxt.textContent = "Синхронизация с базой данных...";
+    const ok = await Firebase.syncToLocalDB();
+
+    if (!hasCached) {
+      // Первый запуск — ждём Firebase
+      loadingEl.style.display = "none";
+      Router.go("home");
+    } else if (ok) {
+      // Уже показали кеш, тихо обновляем текущую страницу
+      const cur = document.querySelector(".page.active")?.id?.replace("page-","");
+      if (cur && Pages[cur]) Pages[cur].render({});
+    } else {
+      showToast("⚠️ Нет связи с сервером, показаны кешированные данные");
+    }
+  });
+
+  // ── Создать плейлист и сразу добавить трек ─────────────
+  // Вызывается из кнопки «Создать новый плейлист» в модалке добавления
+  function createAndAddToPlaylist() {
+    const savedTrackId = _addTrackId; // сохраняем до закрытия модалки
+    closeAddToPlaylist();
+    openCreatePlaylist((pl) => {
+      // pl — объект созданного плейлиста (из confirmCreatePlaylist)
+      if (savedTrackId !== null) {
+        PlaylistManager.addTrack(pl.id, savedTrackId);
+        showToast(`✅ Трек добавлен в «${pl.name}»`);
+        refreshSidebarPlaylists();
+        Pages.playlists?.refresh?.();
+      }
+    });
+  }
+
+  // ── Лайк текущего трека ────────────────────────────────
+  function toggleLike() {
+    const btn = document.getElementById("player-like");
+    const liked = btn.classList.toggle("liked");
+    btn.textContent = liked ? "♥" : "♡";
+    if (liked) showToast("♥ Добавлено в избранное");
+  }
+
+  // ── Router ─────────────────────────────────────────────
+  Router.go = function(pageId, params = {}) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+
+    const pageEl = document.getElementById("page-" + pageId);
+    if (!pageEl) return;
+    pageEl.classList.add("active");
+
+    const navTarget = pageId === "artist-detail" ? "artists" : pageId;
+    const navEl = document.querySelector(`.nav-item[data-page="${navTarget}"]`);
+    if (navEl) navEl.classList.add("active");
+    // Mobile bottom nav sync
+    document.querySelectorAll(".mnav-btn").forEach(b => b.classList.remove("active"));
+    const mnavEl = document.querySelector(`.mnav-btn[data-page="${navTarget}"]`);
+    if (mnavEl) mnavEl.classList.add("active");
+
+    if (Pages[pageId]) Pages[pageId].render(params);
+    document.getElementById("main").scrollTop = 0;
+  };
+</script>
+
+</body>
+</html>
