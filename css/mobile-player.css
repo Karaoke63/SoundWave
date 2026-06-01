@@ -158,7 +158,7 @@
 
 /* ── Tablet: 641–900 ─────────────────────────────────────── */
 @media (min-width: 641px) and (max-width: 900px) {
-  .player-track { flex: 0 0 180px !important; }
+  #player { grid-template-columns: 1fr auto; }
   .player-extras { display: none !important; }
   .cards-grid { grid-template-columns: repeat(3, 1fr); }
 }
