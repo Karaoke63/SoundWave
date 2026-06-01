@@ -242,11 +242,16 @@ Pages["artist-detail"] = {
 
     const albums  = DB.getArtistAlbums(id);
     // Треки в альбомах
-    const albumTrackIds = new Set(albums.flatMap(al => DB.getAlbumTracks(al.id).map(t => t.id)));
+    const albumTrackIds = new Set(albums.flatMap(al => DB.getAlbumTracks(al.id).map(t => String(t.id))));
     // Все треки исполнителя (включая без альбома)
     const allArtistTracks = DB.tracks.filter(t => +t.artist_id === +id);
-    // Треки без альбома
-    const looseTracks = allArtistTracks.filter(t => !albumTrackIds.has(t.id));
+    // Треки без альбома — трек считается "без альбома" если:
+    // 1. album_id не задан/пустой, ИЛИ
+    // 2. альбом с таким ID не найден, ИЛИ
+    // 3. трек не попал ни в один альбом исполнителя
+    const looseTracks = allArtistTracks.filter(t =>
+      !t.album_id || !DB.getAlbum(t.album_id) || !albumTrackIds.has(String(t.id))
+    );
     const allTracks = allArtistTracks;
 
     document.getElementById("page-artist-detail").innerHTML = `
